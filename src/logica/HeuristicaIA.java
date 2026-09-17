@@ -246,6 +246,23 @@ public class HeuristicaIA {
         return manhattan;
     }
 
+    /**
+     * Heurística usada por la búsqueda: distancia de Manhattan más
+     * "conflicto lineal" (Hansson, Mayer &amp; Yung, 1992). Dos piezas
+     * están en conflicto lineal cuando ambas pertenecen a la misma fila
+     * (o columna) objetivo, ambas están ya en esa fila/columna, pero en
+     * el orden contrario al que deberían tener: para llegar a su posición
+     * una de ellas tendrá que salir de la fila/columna y volver a entrar,
+     * lo que cuesta 2 movimientos adicionales por cada pieza que haya que
+     * apartar. El número mínimo de piezas a apartar en una línea con k
+     * piezas candidatas es k menos la subsecuencia creciente más larga
+     * (LIS) de sus columnas/filas objetivo — el resultado clásico de
+     * "mínimo de eliminaciones para dejar una secuencia ordenada". Sumar
+     * 2 * (piezas a apartar) a la distancia de Manhattan sigue siendo
+     * admisible: nunca sobreestima el número real de movimientos, pero
+     * poda drásticamente el árbol de búsqueda de IDA* frente a usar solo
+     * Manhattan.
+     */
     private int calcularHeuristicaPlano(int[] plano) {
         int manhattan = 0;
         for (int idx = 0; idx < 16; idx++) {
@@ -258,7 +275,60 @@ public class HeuristicaIA {
                 manhattan += Math.abs(filaActual - filaObjetivo) + Math.abs(colActual - colObjetivo);
             }
         }
-        return manhattan;
+        return manhattan + calcularConflictoLinealPlano(plano);
+    }
+
+    // Buffers reutilizados para no asignar memoria en el punto más caliente
+    // de la búsqueda (se invoca en cada nodo explorado, potencialmente
+    // decenas de millones de veces por resolución).
+    private final int[] bufferLinea = new int[4];
+    private final int[] bufferLis = new int[4];
+
+    private int calcularConflictoLinealPlano(int[] plano) {
+        int conflicto = 0;
+
+        // Filas: para cada fila, las piezas que pertenecen a esa fila
+        // objetivo, en el orden en que aparecen actualmente.
+        for (int fila = 0; fila < 4; fila++) {
+            int n = 0;
+            for (int col = 0; col < 4; col++) {
+                int valor = plano[fila * 4 + col];
+                if (valor != 0 && (valor - 1) / 4 == fila) {
+                    bufferLinea[n++] = (valor - 1) % 4;
+                }
+            }
+            conflicto += n - longitudSubsecuenciaCreciente(bufferLinea, n);
+        }
+
+        // Columnas: análogo, recorriendo cada columna de arriba a abajo.
+        for (int col = 0; col < 4; col++) {
+            int n = 0;
+            for (int fila = 0; fila < 4; fila++) {
+                int valor = plano[fila * 4 + col];
+                if (valor != 0 && (valor - 1) % 4 == col) {
+                    bufferLinea[n++] = (valor - 1) / 4;
+                }
+            }
+            conflicto += n - longitudSubsecuenciaCreciente(bufferLinea, n);
+        }
+
+        return conflicto * 2;
+    }
+
+    private int longitudSubsecuenciaCreciente(int[] secuencia, int n) {
+        int max = 0;
+        for (int i = 0; i < n; i++) {
+            bufferLis[i] = 1;
+            for (int j = 0; j < i; j++) {
+                if (secuencia[j] < secuencia[i] && bufferLis[j] + 1 > bufferLis[i]) {
+                    bufferLis[i] = bufferLis[j] + 1;
+                }
+            }
+            if (bufferLis[i] > max) {
+                max = bufferLis[i];
+            }
+        }
+        return max;
     }
 
     /**
