@@ -2,6 +2,9 @@
 *.class
 bin/
 
+# Maven
+target/
+
 # Log files
 *.log
 
