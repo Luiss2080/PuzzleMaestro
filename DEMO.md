@@ -27,12 +27,11 @@
 │           🤖 RESOLVIENDO PUZZLE...             │
 ├────────────────────────────────────────────────┤
 │                                                │
-│    Algoritmo A* en progreso...                 │
+│    Algoritmo IDA* en progreso...               │
 │    ████████████████████░░░░ 80%                │
 │                                                │
-│    📊 Iteración: 3,247 / 10,000               │
-│    ⏱️ Tiempo: 2.3s / 5.0s                     │
-│    🔍 Estados visitados: 3,156                 │
+│    📊 Movimiento: 32 / 40                     │
+│    🔍 Buscando la solución óptima...           │
 │                                                │
 └────────────────────────────────────────────────┘
 ```
