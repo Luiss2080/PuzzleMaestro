@@ -111,12 +111,21 @@ public class HeuristicaIA {
         try {
             resolverCapaSuperiores(estado);
             resolverCapaInferiores(estado);
-            
+
             int[] posVacioActual = encontrarEspacioVacio(estado);
             if (posVacioActual[0] != 3 || posVacioActual[1] != 3) {
                 moverEspacioVacioA(estado, 3, 3);
             }
-            
+
+            if (!estaResuelto(estado)) {
+                // Con el límite de sub-movimientos ahora estricto (ver
+                // colocarPiezaEnPosicion), es posible en casos muy raros que
+                // alguna pieza no llegue a su posición final dentro del
+                // límite. Lo dejamos explícito en el log en vez de reportar
+                // éxito silenciosamente sobre un tablero no resuelto.
+                System.out.println("ADVERTENCIA: la solución directa terminó sin resolver completamente el tablero.");
+            }
+
             System.out.println("Solución directa completada con " + solucion.size() + " pasos");
         } catch (Exception e) {
             System.out.println("Error en solución directa: " + e.getMessage());
@@ -191,24 +200,31 @@ public class HeuristicaIA {
         
         int[] posActual = encontrarPieza(estado, pieza);
         if (posActual == null) return;
-        
-        int maxIntentos = 30;
+
+        // IMPORTANTE: "intentos" cuenta el TOTAL de sub-movimientos realizados
+        // para colocar esta pieza y NUNCA se reinicia. La versión anterior
+        // hacía "intentos = 0" cada vez que un movimiento tenía éxito, lo que
+        // anulaba por completo el límite: una pieza que oscila entre dos
+        // casillas (moverse, ser desplazada, volver a moverse) generaba
+        // movimientos "exitosos" indefinidamente, cada uno agregando una
+        // copia del tablero a la lista de solución, hasta agotar la memoria
+        // (OutOfMemoryError verificado empíricamente en tableros difíciles
+        // donde A* agota su presupuesto de búsqueda y cae a este método).
+        int maxIntentos = 60;
         int intentos = 0;
-        
+
         while (intentos < maxIntentos) {
             posActual = encontrarPieza(estado, pieza);
             if (posActual == null) break;
-            
+
             if (posActual[0] == filaDestino && posActual[1] == colDestino) {
                 break;
             }
-            
-            if (moverPiezaUnPaso(estado, posActual, filaDestino, colDestino)) {
-                intentos = 0;
-            } else {
+
+            if (!moverPiezaUnPaso(estado, posActual, filaDestino, colDestino)) {
                 posicionarEspacioVacio(estado, posActual, filaDestino, colDestino);
             }
-            
+
             intentos++;
         }
     }
